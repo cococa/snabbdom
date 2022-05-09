@@ -411,20 +411,23 @@ export function init(
       vnode.data?.hook?.update?.(oldVnode, vnode);
     }
     if (isUndef(vnode.text)) {
-      if (isDef(oldCh) && isDef(ch)) {
-        if (oldCh !== ch) updateChildren(elm, oldCh, ch, insertedVnodeQueue);
+      if (isDef(oldCh) && isDef(ch)) { // 如果新节点没有文本，并且新老节点都有子节点，就调用updateChildren ，这个方法巨复杂，递归+ 调用patchNode
+        // 个人感觉 ，patchVnode中 updateChildren 是核心，别的代码基本都是删除或新增，而updateChildren 才是影响效率的核心
+        if (oldCh !== ch) updateChildren(elm, oldCh, ch, insertedVnodeQueue); 
       } else if (isDef(ch)) {
-        if (isDef(oldVnode.text)) api.setTextContent(elm, "");
-        addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue);
+        if (isDef(oldVnode.text)) api.setTextContent(elm, ""); // （新节点没有文本，并且新节点有子节点，并且老节点有文本），那么就设置空文本
+        addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue); // 然后添加新节点下的所有子节点
       } else if (isDef(oldCh)) {
+        // 新节点没有文本，并且老节点有子节点，那么就删除所有子节点
         removeVnodes(elm, oldCh, 0, oldCh.length - 1);
       } else if (isDef(oldVnode.text)) {
+        // 新节点没有文本，并且老节点有文本，那么就设置空文本
         api.setTextContent(elm, "");
       }
     } else if (oldVnode.text !== vnode.text) {
       // 新vnode 有text 文本，并且新老Vnode 的文本不一致
       if (isDef(oldCh)) {
-        // 没看懂，为什么要删除节点，难道是要更新样式事件等等 （？？？）
+        // 判断老节点是否是 children ，如果有，则删除所有的子节点 （是否是删除所有子节点，还没仔细看，待确认！！！）
         removeVnodes(elm, oldCh, 0, oldCh.length - 1);
       }
       // 更新文本内容
@@ -448,7 +451,7 @@ export function init(
       // 创建空的node 带id,class <p> <div>
       oldVnode = emptyNodeAt(oldVnode);
     } else if (isDocumentFragment(api, oldVnode)) {
-      // 判断是够是DocumentFragment  
+      // 判断是否是DocumentFragment  
       // mdn的解释: DocumentFragment 表示一个没有父级文件的最小文档对象。它被当做一个轻量版的 Document 使用，
       // 用于存储已排好版的或尚未打理好格式的XML片段。最大的区别是因为DocumentFragment不是真实DOM树的一部分，它的变化不会引起DOM树的重新渲染的操作(reflow) ，且不会导致性能等问题。
       // 个人理解就是，没有父节点的原生虚拟 dom 容器，你可对其进行更新操作后在进行渲染，减少真实dom 的更新消耗，对应的nodeType是11
@@ -457,6 +460,7 @@ export function init(
     }
 
     if (sameVnode(oldVnode, vnode)) {
+      // 如果新老节点相同，则进行 patchVnode
       patchVnode(oldVnode, vnode, insertedVnodeQueue);
     } else {
       elm = oldVnode.elm!;

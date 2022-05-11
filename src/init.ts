@@ -285,26 +285,37 @@ export function init(
     }
   }
 
+  // 参考文章  https://www.jianshu.com/p/f45463e7be20
+  //
   function updateChildren(
     parentElm: Node,
     oldCh: VNode[],
     newCh: VNode[],
     insertedVnodeQueue: VNodeQueue
   ) {
+
+    // 定义了4个节点  os oe ns ne
     let oldStartIdx = 0;
     let newStartIdx = 0;
     let oldEndIdx = oldCh.length - 1;
-    let oldStartVnode = oldCh[0];
-    let oldEndVnode = oldCh[oldEndIdx];
+    let oldStartVnode = oldCh[0];   // 老的开始节点，简称os
+    let oldEndVnode = oldCh[oldEndIdx];// 老的开始节点，简称oe
     let newEndIdx = newCh.length - 1;
-    let newStartVnode = newCh[0];
-    let newEndVnode = newCh[newEndIdx];
+    let newStartVnode = newCh[0];   // 新的开始节点，简称ns
+    let newEndVnode = newCh[newEndIdx];// 新的结束节点，简称ne
     let oldKeyToIdx: KeyToIndexMap | undefined;
     let idxInOld: number;
     let elmToMove: VNode;
     let before: any;
 
+    // 用数组的双指针向内收拢循环
+    // 循环的次数 n = min(old.len, new.len)  (不算递归)
     while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+
+      // 做了9种判断:
+      // 前4次判断: 分别是判断4个节点[os,oe,ns,ne]是否为 null（这几个判断就是只要为null, 对应的指针++ 或 -- 向内收拢 ）
+      // 后4次判断: 分别是交叉判断4个节点是否为同一个结点，[os == ns] [oe == ne] [os == ne] [oe == ns ] （重点）
+      // 剩余1次判断: 进入else
       if (oldStartVnode == null) {
         oldStartVnode = oldCh[++oldStartIdx]; // Vnode might have been moved left
       } else if (oldEndVnode == null) {
@@ -314,20 +325,28 @@ export function init(
       } else if (newEndVnode == null) {
         newEndVnode = newCh[--newEndIdx];
       } else if (sameVnode(oldStartVnode, newStartVnode)) {
+        // 两个数组的开始节点相同，则重新调用patchVnode
         patchVnode(oldStartVnode, newStartVnode, insertedVnodeQueue);
+        // 指针++
         oldStartVnode = oldCh[++oldStartIdx];
         newStartVnode = newCh[++newStartIdx];
       } else if (sameVnode(oldEndVnode, newEndVnode)) {
+        // 两个数组的末尾节点相同，则重新调用patchVnode
         patchVnode(oldEndVnode, newEndVnode, insertedVnodeQueue);
+        // 指针--
         oldEndVnode = oldCh[--oldEndIdx];
         newEndVnode = newCh[--newEndIdx];
       } else if (sameVnode(oldStartVnode, newEndVnode)) {
+        // 老的开始等于新的结尾，
         // Vnode moved right
         patchVnode(oldStartVnode, newEndVnode, insertedVnodeQueue);
-        api.insertBefore(
+        // 在 parentElm 的 oldEndVnode后面 插入oldStartVnode
+        // 这里真的没搞懂，为什么Vnode 可以调用 insertBefore nextSibling 方法
+        // 为什么 oldStartVnode 没有删除，或者我没找到删除的方法
+        api.insertBefore( 
           parentElm,
           oldStartVnode.elm!,
-          api.nextSibling(oldEndVnode.elm!)
+          api.nextSibling(oldEndVnode.elm!)  // nextSibling 是原生dom 的 api ,返回某个元素之后紧跟的节点,(这里不是很懂)
         );
         oldStartVnode = oldCh[++oldStartIdx];
         newEndVnode = newCh[--newEndIdx];
